@@ -1,0 +1,5 @@
+*/octave-workspace
+octave-workspace
+*.o
+*.mex
+IMAGES.mat
