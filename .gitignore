@@ -3,3 +3,5 @@ octave-workspace
 *.o
 *.mex
 IMAGES.mat
+IMAGES_RAW.mat
+*mat

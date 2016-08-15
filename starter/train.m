@@ -29,7 +29,7 @@ beta = 3;            % weight of sparsity penalty term
 %  display a random sample of 200 patches from the dataset
 
 patches = sampleIMAGES;
-% display_network(patches(:,randi(size(patches,2),200,1)),8);
+display_network(patches(:,randi(size(patches,2),200,1)),8);
 
 
 %  Obtain random parameters theta
@@ -123,7 +123,7 @@ options.display = 'on';
 %% STEP 5: Visualization 
 
 W1 = reshape(opttheta(1:hiddenSize*visibleSize), hiddenSize, visibleSize);
-%display_network(W1', 12); 
+display_network(W1', 12); 
 
 %print -djpeg weights.jpg   % save the visualization to a file 
 
