@@ -25,13 +25,13 @@ patches = zeros(patchsize*patchsize, numpatches);
 %  Image 1
 imageCount = length(IMAGES(1,1,:))
 for imageNum = 1:imageCount
-	patchNum = numpatches / imageCount
-	[imgh, imgw] = size(IMAGES(:,:,imageNum))
+	patchNum = numpatches / imageCount;
+	[imgh, imgw] = size(IMAGES(:,:,imageNum));
 	for pnum = 1:patchNum
-		xPos = randi([1,imgw-patchsize+1])
-		yPos = randi([1,imgh-patchsize+1])
+		xPos = randi([1,imgw-patchsize+1]);
+		yPos = randi([1,imgh-patchsize+1]);
 		patches(:,(imageNum-1)*patchNum+pnum) = ...
-    reshape(IMAGES(xPos:xPos+7,yPos:yPos+7, imageNum), 64,1)
+    reshape(IMAGES(xPos:xPos+7,yPos:yPos+7, imageNum), 64,1);
 	end
 end
 
