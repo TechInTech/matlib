@@ -5,3 +5,5 @@ octave-workspace
 IMAGES.mat
 IMAGES_RAW.mat
 *mat
+images
+.vscode
