@@ -1,7 +1,10 @@
 import numpy as np
-from base import BaseEstimator
 import random
+
+from base import BaseEstimator
 from metrics import euclidean_distance, manhaton_distance
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 class KMeans(BaseEstimator):
     y_required = False
@@ -63,3 +66,20 @@ class KMeans(BaseEstimator):
     
     def _predict(self, X=None):
         return self.assign
+
+    def plot(self, ax=None, holdon=False):
+
+        data = self.X
+
+        if ax is None:
+            _, ax = plt.subplots()
+
+        for i in range(self.n_clusters):
+            point = np.array(data[self.assign==i]).T
+            ax.scatter(*point, c=sns.color_palette("hls", self.n_clusters + 1)[i])
+
+        for point in self.centroids:
+            ax.scatter(*point, marker='x', linewidths=10)
+
+        if not holdon:
+            plt.show()
