@@ -12,6 +12,9 @@ from kmeans import KMeans
 # from tensorflow.examples.tutorials.mnist import input_data
 from knn import KNNClassifier, KNNRegressor
 from naive_bayes import NaiveBayes
+from gbdt import GBDT
+from sklearn.metrics import roc_auc_score
+from tree import LeastSquareLoss,LogisticLoss
 np.set_printoptions(precision=4)
 
 
@@ -162,7 +165,42 @@ def naivebayes():
     for x in X_test:
         res.append(model.predict(x))
     print(np.mean(res == y_test))
-    
+
+
+def gbdt(kind=1):
+    if kind == 1:
+        # Generate a random binary classification problem.
+        X, y = make_classification(n_samples=350, n_features=15, n_informative=10,
+                                random_state=1111, n_classes=2,
+                                class_sep=1., n_redundant=0)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15,
+                                                            random_state=1111)
+
+        model = GBDT(n_estimators=50, max_tree_depth=4,loss=LogisticLoss(),
+                    max_features=8, lr=0.1)
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+        print(predictions)
+        print(predictions.min())
+        print(predictions.max())
+        print('classification, roc auc score: %s'
+            % roc_auc_score(y_test, predictions))
+    else:
+        # Generate a random regression problem
+        X, y = make_regression(n_samples=500, n_features=5, n_informative=5,
+                            n_targets=1, noise=0.05, random_state=1111,
+                            bias=0.5)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1,
+                                                            random_state=1111)
+
+        model = GBDT(n_estimators=50, max_tree_depth=5,
+                                        max_features=3, min_samples_split=10, lr=0.1)
+        model.fit(X_train, y_train)
+        predictions = model.predict(X_test)
+        print(y_test[:10], predictions[:10])
+        print('regression, mse: %s'
+            % mean_squared_error(y_test.flatten(), predictions.flatten()))
+
 # regression()
 # classification()
 # mlp()
@@ -172,4 +210,5 @@ def naivebayes():
 # gmm()
 # kmeans()
 # knn()
-naivebayes()
+# naivebayes()
+gbdt(2)
