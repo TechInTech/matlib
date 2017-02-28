@@ -24,3 +24,21 @@ def euclidean_distance(a, b):
 
 def manhaton_distance(a, b):
     return np.sum(np.abs(a-b), axis=1)
+
+def entropy_criterion(y):
+    yu = np.unique(y)
+    py = np.zeros(shape=(len(yu)))
+    for i in range(len(yu)):
+        py[i] = np.sum([y == yu[i]]) / y.shape[0]
+    entropy = np.sum(-py * np.log(py))
+    return entropy
+
+def gini_criterion(y, weights=None):
+    yu = np.unique(y)
+    py = None
+    if weights is None:
+        py = [np.sum([y == yi]) / y.shape[0] for yi in yu]
+    else:
+         py = [np.sum(weights[y == yi]) for yi in yu]
+         py /= np.sum(py)
+    return 1-(py*py).sum()

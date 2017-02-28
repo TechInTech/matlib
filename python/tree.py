@@ -3,6 +3,7 @@ import random
 from base import BaseEstimator
 from scipy import stats
 from scipy.special import expit
+from metrics import entropy_criterion, gini_criterion
 
 
 class Loss(object):
@@ -54,17 +55,19 @@ class LogisticLoss(Loss):
 
 class Tree(BaseEstimator):
 
-    def __init__(self, regression=True):
+    def __init__(self, regression=True, criterion='entropy'):
         self.regression = regression
+        self.criterion = criterion
         self.left_tree = None
         self.right_tree = None
         self.leaf_value = None
+        self.yu = None
 
     @property
     def is_leafnode(self):
         return bool(self.left_tree is None and self.right_tree is None)
 
-    def fit(self, X, y, y_pred=None, max_tree_depth=None, min_samples_split=10, min_gain=0.01, max_features=None):
+    def fit(self, X, y, max_tree_depth=None, min_samples_split=10, min_gain=0.01, max_features=None):
         self._setup_input(X, y)
 
         try:
@@ -86,10 +89,10 @@ class Tree(BaseEstimator):
                 self.X, self.y, split_x, split_v)
             self.left_tree = Tree()
             self.left_tree.fit(left_X, left_y, max_tree_depth,
-                               min_samples_split, min_gain, max_features, loss)
+                               min_samples_split, min_gain, max_features)
             self.right_tree = Tree()
             self.right_tree.fit(right_X, right_y, max_tree_depth,
-                                min_samples_split, min_gain, max_features, loss)
+                                min_samples_split, min_gain, max_features)
             self.split_x = split_x
             self.split_v = split_v
 
@@ -101,11 +104,17 @@ class Tree(BaseEstimator):
             max_features = X.shape[1]
         choosen_features = random.sample(
             list(range(0, X.shape[1])), max_features)
+        if self.criterion == 'entropy':
+            initial_entropy = entropy_criterion(y)
+        else:
+            initial_entropy = gini_criterion(y)
 
-        initial_entropy = self._entropy(y)
         split_feature = None
         split_value = None
-        max_gain = 0.0
+        max_gain = None
+        if initial_entropy == 0.0:
+            return split_feature, split_value, max_gain
+
         for i in choosen_features:
             xi = X[:, i].copy()
             np.sort(xi)
@@ -117,23 +126,25 @@ class Tree(BaseEstimator):
             if len(splits) == 0:
                 splits.append((xi[-1] + xi[-2]) / 2)
             for split in splits:
-                y_left, y_right = self._split_data(
-                    X, y, i, split, return_X=False)
-                split_entropy = (len(y_left) * self._entropy(y_left) +
-                                 len(y_right) * self._entropy(y_right)) / y.shape[0]
+                split_entropy = self._split_entropy(X, y, i, split)
                 if (max_gain is None) or max_gain < initial_entropy - split_entropy:
                     max_gain = initial_entropy - split_entropy
                     split_feature = i
                     split_value = split
         return split_feature, split_value, max_gain
 
-    def _entropy(self, y):
-        yu = np.unique(y)
-        py = np.zeros(shape=(len(yu)))
-        for i in range(len(yu)):
-            py[i] = np.sum([y == yu[i]]) / y.shape[0]
-        entropy = np.sum(-py * np.log(py))
-        return entropy
+    def _split_entropy(self, X, y, ix, split):
+        y_left, y_right = self._split_data(
+            X, y, ix, split, return_X=False)
+        if self.criterion == 'entropy':
+            split_entropy = (len(y_left) * entropy_criterion(y_left) +
+                             len(y_right) * entropy_criterion(y_right)) / y.shape[0]
+        elif self.criterion == 'gini':
+            split_entropy = (len(y_left) * gini_criterion(y_left) +
+                             len(y_right) * gini_criterion(y_right)) / y.shape[0]
+        else:
+            raise NotImplementedError()
+        return split_entropy
 
     def _split_data(self, data, target, split_x, split_v, return_X=True):
         left_mask = [data[:, split_x] <= split_v]
@@ -234,7 +245,8 @@ class GBDTree(Tree):
         initial_entropy = self.loss.gain(self.y, self.y_pred)
         split_feature = None
         split_value = None
-        max_gain = 0.0
+        max_gain = None
+
         for i in choosen_features:
             xi = X[:, i].copy()
             np.sort(xi)
@@ -261,3 +273,104 @@ class GBDTree(Tree):
 
     def _cal_leafvalue(self):
         self.leaf_value = self.loss.approximate(self.y, self.y_pred)
+
+
+class AdaBoostTree(Tree):
+
+    def __init__(self, regression=True):
+        self.regression = regression
+        self.left_tree = None
+        self.right_tree = None
+        self.leaf_value = None
+        self.yu = None
+
+    def fit(self, X, y, weights, max_tree_depth=None, min_samples_split=10, min_gain=0.01, max_features=None):
+        self._setup_input(X, y)
+        if not isinstance(weights, np.ndarray):
+            self.weights = np.array(weights)
+        else:
+            self.weights = weights
+
+        try:
+            assert(max_tree_depth is None or max_tree_depth > 0)
+            assert(self.n_samples >= min_samples_split)
+            if max_tree_depth is not None:
+                max_tree_depth -= 1
+            if max_features is not None:
+                assert(max_features <= self.n_features)
+
+            split_x, split_v, gain = self._find_best_split(
+                self.X, self.y, self.weights, max_features)
+            if self.regression:
+                assert(gain != 0)
+            else:
+                assert(gain > min_gain)
+
+            left_mask = [self.X[:, split_x] <= split_v]
+            right_mask = [self.X[:, split_x] > split_v]
+            left_X, left_y, left_weights = self.X[left_mask], self.y[
+                left_mask], self.weights[left_mask]
+            right_X, right_y, right_weights = self.X[
+                right_mask], self.y[right_mask], self.weights[right_mask]
+
+            self.left_tree = AdaBoostTree(
+                regression=self.regression)
+            self.left_tree.fit(left_X, left_y, left_weights, max_tree_depth,
+                               min_samples_split, min_gain, max_features)
+            self.right_tree = AdaBoostTree(
+                regression=self.regression)
+            self.right_tree.fit(right_X, right_y, right_weights,
+                                max_tree_depth, min_samples_split, min_gain, max_features)
+            self.split_x = split_x
+            self.split_v = split_v
+
+        except AssertionError:
+            self._cal_leafvalue()
+
+    def _find_best_split(self, X, y, weights, max_features=None):
+        if max_features is None:
+            max_features = X.shape[1]
+        choosen_features = random.sample(
+            list(range(0, X.shape[1])), max_features)
+
+        initial_entropy = gini_criterion(self.y, self.weights)
+        split_feature = None
+        split_value = None
+        max_gain = None
+
+        for i in choosen_features:
+            xi = X[:, i].copy()
+            np.sort(xi)
+            splits = []
+            for j in range(self.n_samples - 1):
+                if np.isclose(xi[j], xi[j + 1]):
+                    pass
+                splits.append((xi[j] + xi[j + 1]) * 0.5)
+            if len(splits) == 0:
+                splits.append((xi[-1] + xi[-2]) / 2)
+            for split in splits:
+                left_mask = [X[:, i] <= split]
+                right_mask = [X[:, i] > split]
+                y_left, y_right = y[left_mask], y[right_mask]
+                weights_left, weights_right = weights[
+                    left_mask], weights[right_mask]
+                gain = gini_criterion(
+                    y_left, weights_left) + gini_criterion(y_right, weights_right) - initial_entropy
+                if (max_gain is None) or max_gain < gain:
+                    max_gain = gain
+                    split_feature = i
+                    split_value = split
+        return split_feature, split_value, max_gain
+
+    def _split_entropy(self, X, y, ix, split):
+        return None
+
+    def _cal_leafvalue(self):
+        if self.regression:
+            self.leaf_value = np.mean(self.y)
+        else:
+            unique = np.unique(self.y)
+            freq = {}
+            for u in unique:
+                freq[u] = np.sum(self.y == u) / float(self.n_samples)
+            self.leaf_value = max(freq, key=freq.get)

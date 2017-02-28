@@ -15,6 +15,9 @@ from naive_bayes import NaiveBayes
 from gbdt import GBDT
 from sklearn.metrics import roc_auc_score
 from tree import LeastSquareLoss,LogisticLoss
+from ada_boost import AdaBoost
+from isolation_forest import IsolationForest
+
 np.set_printoptions(precision=4)
 
 
@@ -201,6 +204,65 @@ def gbdt(kind=1):
         print('regression, mse: %s'
             % mean_squared_error(y_test.flatten(), predictions.flatten()))
 
+def adaBoost():
+    X, y = make_classification(n_samples=350, n_features=15, n_informative=10,
+                            random_state=1111, n_classes=2,
+                            class_sep=1., n_redundant=0)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15,
+                                                        random_state=1111)
+
+    model = AdaBoost(n_estimators=10, max_tree_depth=5,
+                max_features=8)
+    model.fit(X_train, y_train)
+    predictions = model.predict(X_test)
+    print(predictions)
+    print(predictions.min())
+    print(predictions.max())
+    print('classification, roc auc score: %s'
+        % roc_auc_score(y_test, predictions))
+    
+def isolation_tree():
+    rng = np.random.RandomState(42)
+
+    n_features = 2
+    # Generate train data
+    X = 0.3 * rng.randn(1000, n_features)
+    X_train = np.r_[X + 2, X - 2]
+    # Generate some regular novel observations
+    X = 0.3 * rng.randn(200, n_features)
+    X_test = np.r_[X + 2, X - 2]
+    # Generate some abnormal novel observations
+    X_outliers = rng.uniform(low=-4, high=4, size=(20, n_features))
+
+    # fit the model
+    clf = IsolationForest(n_choosen=64)
+    clf.fit(X_train)
+    y_pred_train = clf.predict(X_train)
+    y_pred_test = clf.predict(X_test)
+    y_pred_outliers = clf.predict(X_outliers)
+
+    print(np.mean(y_pred_train), np.mean(y_pred_test), y_pred_outliers)
+    # plot the line, the samples, and the nearest vectors to the plane
+    if n_features == 2:
+        xx, yy = np.meshgrid(np.linspace(-5, 5, 50), np.linspace(-5, 5, 50))
+        Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
+        Z = Z.reshape(xx.shape)
+
+        # plt.title("IsolationForest")
+        plt.contourf(xx, yy, Z, cmap=plt.cm.Blues_r)
+
+        b1 = plt.scatter(X_train[:, 0], X_train[:, 1], c='white')
+        b2 = plt.scatter(X_test[:, 0], X_test[:, 1], c='green')
+        c = plt.scatter(X_outliers[:, 0], X_outliers[:, 1], c='red')
+        plt.axis('tight')
+        plt.xlim((-5, 5))
+        plt.ylim((-5, 5))
+        plt.legend([b1, b2, c],
+                ["training observations",
+                    "new regular observations", "new abnormal observations"],
+                loc="upper left")
+        plt.show()
+
 # regression()
 # classification()
 # mlp()
@@ -211,4 +273,6 @@ def gbdt(kind=1):
 # kmeans()
 # knn()
 # naivebayes()
-gbdt(2)
+# gbdt(1)
+# adaBoost()
+isolation_tree()
