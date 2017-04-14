@@ -42,3 +42,21 @@ def gini_criterion(y, weights=None):
          py = [np.sum(weights[y == yi]) for yi in yu]
          py /= np.sum(py)
     return 1-(py*py).sum()
+
+
+def batch_iterator(X, batch_size=64):
+    """Splits X into equal sized chunks."""
+    n_samples = X.shape[0]
+    n_batches = n_samples // batch_size
+    batch_end = 0
+
+    for b in range(n_batches):
+        batch_begin = b * batch_size
+        batch_end = batch_begin + batch_size
+
+        X_batch = X[batch_begin:batch_end]
+
+        yield X_batch
+
+    if n_batches * batch_size < n_samples:
+        yield X[batch_end:]

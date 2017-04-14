@@ -2,7 +2,7 @@
 import numpy as np
 from linearModel import LinearRegression, LogisticRegression, SoftMaxRegression
 import matplotlib.pyplot as plt
-from sklearn.datasets import make_regression, make_classification, load_iris, make_blobs
+from sklearn.datasets import make_regression, make_classification, load_iris, make_blobs, load_diabetes
 from sklearn.model_selection import train_test_split
 from metrics import mean_squared_error
 from mlp import MLP
@@ -17,6 +17,8 @@ from sklearn.metrics import roc_auc_score
 from tree import LeastSquareLoss,LogisticLoss
 from ada_boost import AdaBoost
 from isolation_forest import IsolationForest
+from rbm import RBM
+from fm import FM
 
 np.set_printoptions(precision=4)
 
@@ -263,6 +265,27 @@ def isolation_tree():
                 loc="upper left")
         plt.show()
 
+def print_curve(errors, n=25):
+    def moving_average(a):
+        ret = np.cumsum(a, dtype=float)
+        ret[n:] = ret[n:] - ret[:-n]
+        return ret[n - 1:] / n
+
+    plt.plot(moving_average(errors))
+    plt.show()
+
+def rbm():
+    X = np.random.uniform(0, 1, (1500, 10))
+    rbm = RBM(n_hidden=10, max_epochs=200, batch_size=10, lr=0.05)
+    rbm.fit(X)
+    print_curve(rbm.errors)
+
+def fm():
+    X, y = load_diabetes(return_X_y=True)
+    clf = FM(K=2, max_iters=200, lr=0.05)
+    clf.fit(X, y)
+    print_curve(clf.losses, 10)
+
 # regression()
 # classification()
 # mlp()
@@ -275,4 +298,6 @@ def isolation_tree():
 # naivebayes()
 # gbdt(1)
 # adaBoost()
-isolation_tree()
+# isolation_tree()
+# rbm()
+fm()
