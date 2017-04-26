@@ -41,6 +41,9 @@ class BaseEstimator(object):
     def predict(self, X=None):
         if not isinstance(X, np.ndarray):
             X = np.array(X)
+        
+        # if len(X.shape) == 1:  # It is a single sample
+        #     X = np.expand_dims(X, 0)
 
         if self.X is not None or not self.fit_required:
             return self._predict(X)

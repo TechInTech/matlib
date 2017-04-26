@@ -44,8 +44,10 @@ def gini_criterion(y, weights=None):
     return 1-(py*py).sum()
 
 
-def batch_iterator(X, batch_size=64):
+def batch_iterator(X, y=None, batch_size=64):
     """Splits X into equal sized chunks."""
+    if y is not None:
+        assert(y.shape[0] == X.shape[0])
     n_samples = X.shape[0]
     n_batches = n_samples // batch_size
     batch_end = 0
@@ -54,9 +56,14 @@ def batch_iterator(X, batch_size=64):
         batch_begin = b * batch_size
         batch_end = batch_begin + batch_size
 
-        X_batch = X[batch_begin:batch_end]
-
-        yield X_batch
+        if y is None:
+            X_batch = X[batch_begin:batch_end]
+            yield X_batch
+        else:
+            yield X[batch_begin:batch_end], y[batch_begin:batch_end]
 
     if n_batches * batch_size < n_samples:
-        yield X[batch_end:]
+        if y is None:
+            yield X[batch_end:]
+        else:
+            yield X[batch_end:], y[batch_end:]

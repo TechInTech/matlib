@@ -2,8 +2,9 @@
 import numpy as np
 from linearModel import LinearRegression, LogisticRegression, SoftMaxRegression
 import matplotlib.pyplot as plt
-from sklearn.datasets import make_regression, make_classification, load_iris, make_blobs, load_diabetes
+from sklearn.datasets import make_regression, make_classification, load_iris, make_blobs, load_diabetes, load_digits
 from sklearn.model_selection import train_test_split
+from sklearn.metrics.classification import accuracy_score
 from metrics import mean_squared_error
 from mlp import MLP
 from decomposition import PCA, LDA, TSNE
@@ -19,7 +20,7 @@ from ada_boost import AdaBoost
 from isolation_forest import IsolationForest
 from rbm import RBM
 from fm import FM
-
+from dbn import DBNClassifier, DBNRegressor
 np.set_printoptions(precision=4)
 
 
@@ -286,6 +287,17 @@ def fm():
     clf.fit(X, y)
     print_curve(clf.losses, 10)
 
+def dbn():
+    X, y = load_digits(return_X_y=True)
+    X = (X / 16).astype(np.float32)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+    clf = DBNClassifier(lr=0.1, max_epochs=100, l2_regularization=1.0, 
+        dropout_p=0.2, hidden_layers=[256,256], rbm_lr=0.05, rbm_epochs=10, batch_size=32, active_func='relu')
+    clf.fit(X_train, Y_train)
+    y_pred = np.argmax(clf.predict(X_test), axis=1)
+    # print(y_pred.shape, Y_test.shape)
+    print 'Done.\nAccuracy: %f' % accuracy_score(Y_test, y_pred)
+
 # regression()
 # classification()
 # mlp()
@@ -300,4 +312,5 @@ def fm():
 # adaBoost()
 # isolation_tree()
 # rbm()
-fm()
+# fm()
+dbn()
