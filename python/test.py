@@ -21,6 +21,7 @@ from isolation_forest import IsolationForest
 from rbm import RBM
 from fm import FM
 from dbn import DBNClassifier, DBNRegressor
+from hmm import HMM
 np.set_printoptions(precision=4)
 
 
@@ -298,6 +299,21 @@ def dbn():
     # print(y_pred.shape, Y_test.shape)
     print 'Done.\nAccuracy: %f' % accuracy_score(Y_test, y_pred)
 
+def hmm():
+    start_probs = np.array([0.5, 0.5])
+    trans_probs = np.array([[0.7, 0.3], [0.4, 0.6]])
+    emit_probs = np.array([
+        [0.1, 0.4, 0.5],
+        [0.6, 0.3, 0.1]
+    ]);
+    x = [0,1,2,2,0,0,0,2]
+    model = HMM(np.arange(3), np.arange(2), start_probs, trans_probs, emit_probs)
+    # print model.evaluate(x)
+    # print model.veterbi(x)
+    model.fit(x, smoothing=1.0)
+    print model.start_probs
+    print model.trans_probs
+    print model.emit_probs
 # regression()
 # classification()
 # mlp()
@@ -313,4 +329,5 @@ def dbn():
 # isolation_tree()
 # rbm()
 # fm()
-dbn()
+# dbn()
+hmm()

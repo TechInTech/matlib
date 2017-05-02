@@ -13,7 +13,7 @@ class BaseEstimator(object):
             raise ValueError('X can not be empty')
         
         if X.ndim == 1:
-            self.n_samples, self.n_features = 1, X.shape
+            self.n_samples, self.n_features = 1, X.shape[0]
         else:
             self.n_samples, self.n_features = X.shape[0], np.prod(X.shape[1:])
         
