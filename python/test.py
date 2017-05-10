@@ -22,6 +22,7 @@ from rbm import RBM
 from fm import FM
 from dbn import DBNClassifier, DBNRegressor
 from hmm import HMM
+from apriori import Apriori
 np.set_printoptions(precision=4)
 
 
@@ -314,6 +315,18 @@ def hmm():
     print model.start_probs
     print model.trans_probs
     print model.emit_probs
+
+def apriori():
+    transactions = np.array([[1, 2, 3, 4], [1, 2, 4], [1, 2], [2, 3, 4], [2, 3], [3, 4], [2, 4]])
+    print ("- Apriori -")
+    min_sup = 0.25
+    min_conf = 0.8
+    print ("Minimum Support: %.2f, Minimum Confidence: %s" % (min_sup, min_conf))
+    print ("Transactions:")
+    for transaction in transactions:
+        print ("\t%s" % transaction)
+    apriori = Apriori(min_support=min_sup, min_confidence=min_conf)
+    apriori.evaluate(transactions)
 # regression()
 # classification()
 # mlp()
@@ -330,4 +343,5 @@ def hmm():
 # rbm()
 # fm()
 # dbn()
-hmm()
+# hmm()
+apriori()

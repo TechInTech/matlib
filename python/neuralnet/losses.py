@@ -1,4 +1,9 @@
+from __future__ import absolute_import
 import numpy as np
+import six
+import warnings
+from ..utils import serialize_object, deserialize_object
+
 EPSILON = 1e-15
 
 
@@ -63,10 +68,6 @@ def cosine_proximity(y_true, y_pred):
     return -np.mean(y_true * y_pred, axis=-1)
 
 
-def l2_distance(X):
-    sum_X = np.sum(X * X, axis=1)
-    return (-2 * np.dot(X, X.T) + sum_X).T + sum_X
-
 # Aliases.
 
 mse = MSE = mean_squared_error
@@ -77,65 +78,25 @@ kld = KLD = kullback_leibler_divergence
 cosine = cosine_proximity
 
 
-def euclidean_distance(a, b):
-    if not isinstance(a, np.ndarray):
-        a = np.array(a)
-    if not isinstance(b, np.ndarray):
-        b = np.array(b)
-    if b.ndim == 1:
-        b = b.reshape(1, -1)
-        return np.sqrt(np.sum((a - b) ** 2, axis=1))
+def serialize(loss):
+    return loss.__name__
+
+
+def deserialize(name, custom_objects=None):
+    return deserialize_object(name,
+                              module_objects=globals(),
+                              custom_objects=custom_objects,
+                              printable_module_name='loss function')
+
+
+def get(identifier):
+    if identifier is None:
+        return None
+    if isinstance(identifier, six.string_types):
+        identifier = str(identifier)
+        return deserialize(identifier)
+    elif callable(identifier):
+        return identifier
     else:
-        dists = []
-        for xb in b:
-            dists.append(np.sqrt(np.sum((a - xb) ** 2, axis=1)))
-        return dists
-
-
-def manhaton_distance(a, b):
-    return np.sum(np.abs(a - b), axis=1)
-
-
-def entropy_criterion(y):
-    yu = np.unique(y)
-    py = np.zeros(shape=(len(yu)))
-    for i in range(len(yu)):
-        py[i] = np.sum([y == yu[i]]) / y.shape[0]
-    entropy = np.sum(-py * np.log(py))
-    return entropy
-
-
-def gini_criterion(y, weights=None):
-    yu = np.unique(y)
-    py = None
-    if weights is None:
-        py = [np.sum([y == yi]) / y.shape[0] for yi in yu]
-    else:
-        py = [np.sum(weights[y == yi]) for yi in yu]
-        py /= np.sum(py)
-    return 1 - (py * py).sum()
-
-
-def batch_iterator(X, y=None, batch_size=64):
-    """Splits X into equal sized chunks."""
-    if y is not None:
-        assert(y.shape[0] == X.shape[0])
-    n_samples = X.shape[0]
-    n_batches = n_samples // batch_size
-    batch_end = 0
-
-    for b in range(n_batches):
-        batch_begin = b * batch_size
-        batch_end = batch_begin + batch_size
-
-        if y is None:
-            X_batch = X[batch_begin:batch_end]
-            yield X_batch
-        else:
-            yield X[batch_begin:batch_end], y[batch_begin:batch_end]
-
-    if n_batches * batch_size < n_samples:
-        if y is None:
-            yield X[batch_end:]
-        else:
-            yield X[batch_end:], y[batch_end:]
+        raise ValueError('Could not interpret '
+                         'loss function identifier:', identifier)
