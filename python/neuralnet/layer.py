@@ -11,6 +11,53 @@ from ..utils import _to_snake_case, get_uid, _collect_previous_mask, \
 from . import initializers, constraints, regularizers, activations
 
 
+def _bias_add(out, bias):
+    return out + bias
+
+
+def _object_list_uid(object_list):
+    object_list = _to_list(object_list)
+    return ', '.join([str(abs(id(x))) for x in object_list])
+
+
+def _is_all_none(iterable_or_element):
+    if not isinstance(iterable_or_element, (list, tuple)):
+        iterable = [iterable_or_element]
+    else:
+        iterable = iterable_or_element
+    for element in iterable:
+        if element is not None:
+            return False
+    return True
+
+
+def _to_list(x):
+    """Normalizes a list/tensor into a list.
+
+    If a tensor is passed, we return
+    a list of size 1 containing the tensor.
+
+    # Arguments
+        x: target object to be normalized.
+
+    # Returns
+        A list.
+    """
+    if isinstance(x, (list, tuple)):
+        return x
+    return [x]
+
+
+def _collect_input_shape(input_tensors):
+    if '_shape' in input_tensors:
+        shapes = input_tensors['_shape']
+        if len(shapes) == 1:
+            return shapes[0]
+        return shapes
+    else:
+        raise ValueError('inputs has no shape')
+
+
 class InputSpec(object):
 
     def __init__(self, dtype=None,
@@ -385,7 +432,7 @@ class Layer(object):
         #     uses_lp = getattr(self, 'uses_learning_phase', False) or uses_lp
         #     output_tensors[i]._uses_learning_phase = getattr(
         #         output_tensors[i], '_uses_learning_phase', False) or uses_lp
-        #     output_tensors[i]._history = (self, len(self.inbound_nodes) - 1, i)
+        # output_tensors[i]._history = (self, len(self.inbound_nodes) - 1, i)
 
     def add_weight(self,
                    name,
@@ -821,48 +868,33 @@ class Flatten(Layer):
         return inputs.reshape(inputs.shape[0], np.prod(inputs.shape[1:]))
 
 
-def _bias_add(out, bias):
-    return out + bias
+class Dropout(Layer):
+    def __init__(self, rate, **kwargs):
+        super(Dropout, self).__init__(**kwargs)
+        self.rate = np.clip(rate, 0., 1.)
+        self.supports_masking = True
 
+    def call(self, inputs):
+        rnd = np.random.uniform(size=(inputs.shape[0]))
+        out = inputs[rnd > self.rate]
+        out /= (1.0-self.rate)
 
-def _object_list_uid(object_list):
-    object_list = _to_list(object_list)
-    return ', '.join([str(abs(id(x))) for x in object_list])
+    def get_config(self):
+        config = {'rate': self.rate}
+        base_config = super(Dropout, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
 
+class Activation(Layer):
 
-def _is_all_none(iterable_or_element):
-    if not isinstance(iterable_or_element, (list, tuple)):
-        iterable = [iterable_or_element]
-    else:
-        iterable = iterable_or_element
-    for element in iterable:
-        if element is not None:
-            return False
-    return True
+    def __init__(self, activation, **kwargs):
+        super(Activation, self).__init__(**kwargs)
+        self.supports_masking = True
+        self.activation = activations.get(activation)
 
+    def call(self, inputs):
+        return self.activation(inputs)
 
-def _to_list(x):
-    """Normalizes a list/tensor into a list.
-
-    If a tensor is passed, we return
-    a list of size 1 containing the tensor.
-
-    # Arguments
-        x: target object to be normalized.
-
-    # Returns
-        A list.
-    """
-    if isinstance(x, (list, tuple)):
-        return x
-    return [x]
-
-
-def _collect_input_shape(input_tensors):
-    if '_shape' in input_tensors:
-        shapes = input_tensors['_shape']
-        if len(shapes) == 1:
-            return shapes[0]
-        return shapes
-    else:
-        raise ValueError('inputs has no shape')
+    def get_config(self):
+        config = {'activation': activations.serialize(self.activation)}
+        base_config = super(Activation, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))

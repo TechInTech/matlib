@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-import numpy as np
+import autograd.numpy as np
 import six
 import warnings
 from ..utils import serialize_object, deserialize_object
