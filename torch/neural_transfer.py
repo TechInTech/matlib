@@ -234,7 +234,7 @@ def init_vgg16(model_folder):
             model_folder, 'vgg16.weight'))
 
 
-def train(style_image, img_size, dataset, vgg_model_dir, batch_size=8, lr=0.001):
+def train(style_image, img_size, dataset, vgg_model_dir, style_size, batch_size=8, lr=0.001):
 
     img_transforms = transforms.Compose([transforms.Scale(img_size),
                                          transforms.CenterCrop(img_size),
